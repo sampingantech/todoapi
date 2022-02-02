@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "todoapi"
+version = "0.1.0"
+description = ""
+authors = ["Sakti Dwi Cahyono <sakti@sampingan.co.id>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = "^0.73.0"
+uvicorn = "^0.17.1"
+orjson = "^3.6.6"
+sqlmodel = "^0.0.6"
+pytest = "^6.2.5"
+asyncpg = "^0.25.0"
+pydantic = {extras = ["dotenv"], version = "^1.9.0"}
+fastapi-pagination = {extras = ["sqlalchemy"], version = "^0.9.1"}
+
+[tool.poetry.dev-dependencies]
+black = {version = "^22.1.0", allow-prereleases = true}
+mypy = "^0.931"
+lxml = "^4.7.1"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
