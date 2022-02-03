@@ -13,7 +13,8 @@ from todoapi.models import Todo, TodoCreate
 from .config import settings
 
 
-app = FastAPI(title=settings.app_name, default_response_class=ORJSONResponse)
+app = FastAPI()
+v1 = FastAPI(title=settings.app_name, default_response_class=ORJSONResponse)
 
 
 @app.on_event("startup")
@@ -21,17 +22,17 @@ async def on_startup():
     await init_db()
 
 
-@app.get("/ping")
-async def pong():
-    return {"ping": "pong!"}
-
-
-@app.get("/")
+@v1.get("/")
 def read_root():
     return {"app_name": settings.app_name}
 
 
-@app.get("/todos", response_model=Page[Todo])
+@v1.get("/ping")
+async def pong():
+    return {"ping": "pong!"}
+
+
+@v1.get("/todos", response_model=Page[Todo])
 async def get_todos(
     is_done: Optional[bool] = None,
     params: Params = Depends(),
@@ -43,8 +44,8 @@ async def get_todos(
     return await paginate(session, query, params)
 
 
-@app.get("/todos/{todo_id}")
-async def get_todo(todo_id: int, session: AsyncSession = Depends(get_session)) -> Todo:
+@v1.get("/todos/{todo_id}", response_model=Todo)
+async def get_todo(todo_id: int, session: AsyncSession = Depends(get_session)):
     try:
         result = await session.execute(select(Todo).where(Todo.id == todo_id))
         todo = result.scalars().one()
@@ -53,26 +54,40 @@ async def get_todo(todo_id: int, session: AsyncSession = Depends(get_session)) -
         raise HTTPException(status_code=404)
 
 
-@app.put("/todos/{todo_id}", response_model=Todo)
+@v1.put("/todos/{todo_id}", response_model=Todo)
 async def update_todo(
     todo_id: int, todo_update: TodoCreate, session: AsyncSession = Depends(get_session)
 ):
+    #  get object
     result = await session.execute(select(Todo).where(Todo.id == todo_id))
     todo = result.scalars().one_or_none()
+    # err handling not found
     if not todo:
         raise HTTPException(status_code=404)
+
+    # process update
     todo.title = todo_update.title
     todo.is_done = todo_update.is_done
     session.add(todo)
+
+    # commit transaction
     await session.commit()
     await session.refresh(todo)
     return todo
 
 
-@app.post("/todos", response_model=Todo)
+@v1.post("/todos", response_model=Todo)
 async def add_todo(todo: TodoCreate, session: AsyncSession = Depends(get_session)):
     todo = Todo(**todo.dict())
+
+    # insert table
     session.add(todo)
+
     await session.commit()
+
+    # update field
     await session.refresh(todo)
     return todo
+
+
+app.mount("/v1", v1)
